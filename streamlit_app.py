@@ -75,7 +75,7 @@ st.write('# Anime Recommender App')
 # Summary of the app
 st.write('This app will give you anime recommendations that are similar to an anime you choose. \
     Choose an anime from our list of shows and movies below and choose how many \
-    recommendations you would like. You can also choose if you wantonly movies, shows, \
+    recommendations you would like. You can also choose if you want only movies, shows, \
     or either returned. There is also an option to only recommend anime of a certain genre.')
 
 # Get the inputs for the recommender system
