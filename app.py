@@ -4,6 +4,15 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
+# load in the csv files for the recommender system
+model_df = pd.read_csv('./Data/model_df.csv', index_col='jw_entity_id')
+lookup_table = pd.read_csv('./Data/lookup_table.csv', index_col='jw_entity_id')
+# change column types from float to int
+lookup_table['release_year'] = lookup_table['release_year'].astype(int)
+lookup_table['seasons'] = lookup_table['seasons'].astype(int)
+# chanege column names to more presentable names
+lookup_table.columns = ['Title', 'Type', 'Year Released', 'Seasons']
+
 # create the recommender system function
 # Creating cosine recommendation function
 def preference_cosine_rec(model_df, title, num_recs, type_pref, genre_pref):
@@ -19,25 +28,23 @@ def preference_cosine_rec(model_df, title, num_recs, type_pref, genre_pref):
         filtered_model_df = model_df.loc[model_df['movie_'] == 1]
     else:
         filtered_model_df = model_df
-        
+  
     # Filtering filtered_model_df by genre
     if genre_pref == 'No Preference':
         filtered_model_df = filtered_model_df
     else:
         filtered_model_df = filtered_model_df.loc[filtered_model_df[genre_pref] == 1]
-    
+
     # Get the index of the row for the title
-    title_index = lookup_table.index[lookup_table['title'] == title]
+    title_index = lookup_table.index[lookup_table['Title'] == title]
     # get the row of the title_index from model_df and reshape it
     title_array = np.array(model_df.loc[title_index]).reshape(1,-1)
-    
+
     # check if title_index is in filtered_model_df
     # Append the title array to the filtered_model_df if it is not
-    try:
-        filtered_model_df.loc[title_index].empty
-        pass
-    except:    
-        filtered_model_df = filtered_model_df.append(model_df.loc[title_index])    
+    if title_index not in list(filtered_model_df.index):
+        filtered_model_df = filtered_model_df.append(model_df.loc[title_index])
+   
 
     # Create the cosine similarity matrix based on the title
     # cosine similarity matrix
@@ -45,7 +52,7 @@ def preference_cosine_rec(model_df, title, num_recs, type_pref, genre_pref):
 
     # create a dataframe from the cosine_matrix
     cosine_df = pd.DataFrame(data=cosine_matrix, index=filtered_model_df.index)
-    
+
     # top n results of the cosine_df
     results = cosine_df.sort_values(0, ascending=False).index.values[:num_recs+1]
     
@@ -55,11 +62,6 @@ def preference_cosine_rec(model_df, title, num_recs, type_pref, genre_pref):
 
 # the function is created for the recommender system
 # Below code is for designing and implementing streamlit
-
-# load in the csv files for the recommender system
-model_df = pd.read_csv('./data/model_df.csv', index_col='jw_entity_id')
-lookup_table = pd.read_csv('./data/lookup_table.csv', index_col='jw_entity_id')
-lookup_table['release_year'] = lookup_table['release_year'].astype(str)
 
 # Make streamlit wider
 st.set_page_config(layout="centered")
@@ -80,7 +82,7 @@ st.write('This app will give you anime recommendations that are similar to an an
 
 # Get list of titles for searching
 list_of_titles = ['Type in a show or movie']
-list_of_titles.extend(lookup_table['title'])
+list_of_titles.extend(lookup_table['Title'])
 # Search bar for the titles
 title = st.selectbox("Select a show or movie you want a recommendation for: ", list_of_titles)
 
@@ -98,7 +100,23 @@ genre_list.extend(list(model_df.columns)[504:-2])
 genre_pref = st.selectbox("Do you have a preference for a genre?", genre_list)
 
 # Button to activate recommender function
-rec_button = st.button("Give Me Recommendation!")
+rec_button = st.button("Give Me Recommendations!")
 
 if rec_button:
-    st.write(preference_cosine_rec(model_df, title, num_recs, type_pref, genre_pref))
+    # Run the function and assign it to df
+    df = preference_cosine_rec(model_df, title, num_recs, type_pref, genre_pref)
+    
+    # The below code will output the df without the index column
+    # CSS to inject contained in a string
+    hide_dataframe_row_index = """
+        <style>
+        .row_heading.level0 {display:none}
+        .blank {display:none}
+        </style>
+        """
+
+    # Inject CSS with Markdown
+    st.markdown(hide_dataframe_row_index, unsafe_allow_html=True)
+
+    # Display an interactive table
+    st.table(df)
